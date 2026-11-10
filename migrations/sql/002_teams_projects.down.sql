@@ -1,0 +1,17 @@
+-- Drop 002_teams_projects.up.sql
+DROP TABLE IF EXISTS project_bookmarks CASCADE;
+DROP TABLE IF EXISTS project_activity CASCADE;
+DROP TABLE IF EXISTS task_assignments CASCADE;
+DROP TABLE IF EXISTS tasks CASCADE;
+DROP TABLE IF EXISTS milestones CASCADE;
+DROP TABLE IF EXISTS project_members CASCADE;
+DROP TABLE IF EXISTS project_skills CASCADE;
+DROP TABLE IF EXISTS projects CASCADE;
+DROP TABLE IF EXISTS collaboration_requests CASCADE;
+DROP TABLE IF EXISTS position_applications CASCADE;
+DROP TABLE IF EXISTS open_positions CASCADE;
+DROP TABLE IF EXISTS team_members CASCADE;
+DROP TABLE IF EXISTS teams CASCADE;
+
+DROP FUNCTION IF EXISTS update_team_search_vector() CASCADE;
+DROP FUNCTION IF EXISTS update_project_search_vector() CASCADE;

@@ -1,0 +1,60 @@
+# Dependency directories
+node_modules/
+dist/
+.svelte-kit/
+
+# Environment variables — NEVER commit
+.env
+.env.*
+!.env.example
+*.env
+.env.local
+.env.*.local
+
+# Database
+*.sqlite
+*.db
+postgres_data/
+
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build outputs
+build/
+out/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+
+# Python (AI service)
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+ai-service/.venv/
+
+# Temporary
+*.tmp
+*.temp
+scratch/

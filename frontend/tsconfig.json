@@ -1,0 +1,18 @@
+{
+	"compilerOptions": {
+		"moduleResolution": "bundler",
+		"module": "esnext",
+		"target": "es2022",
+		"strict": true,
+		"skipLibCheck": true,
+		"paths": {
+			"$lib": ["./src/lib"],
+			"$lib/*": ["./src/lib/*"]
+		}
+	},
+	"include": [
+		"src/**/*",
+		"vite.config.ts",
+		"node_modules/@sveltejs/kit/src/types/ambient.d.ts"
+	]
+}
