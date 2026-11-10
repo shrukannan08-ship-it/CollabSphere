@@ -171,7 +171,7 @@
 </div>
 
 <style>
-	/* Full viewport background of snowy winter mountain sunset landscape */
+	/* Full viewport background using the attached golden courtyard sunset image */
 	.login-viewport-wrapper {
 		min-height: 100vh;
 		width: 100%;
@@ -179,10 +179,10 @@
 		align-items: center;
 		justify-content: center;
 		padding: 24px 16px;
-		background-color: #556c87;
+		background-color: #6b4e3d;
 		background-image:
-			linear-gradient(rgba(20, 30, 45, 0.12), rgba(20, 30, 45, 0.22)),
-			url('/new-image.png');
+			linear-gradient(rgba(30, 18, 12, 0.22), rgba(30, 18, 12, 0.30)),
+			url('/login-bg.jpg');
 		background-size: cover;
 		background-position: center center;
 		background-repeat: no-repeat;
@@ -191,19 +191,19 @@
 		box-sizing: border-box;
 	}
 
-	/* Center Frosted Glassmorphism Card (Exact Screenshot Match) */
+	/* Center Frosted Glassmorphism Card (readable against sunlit golden sky) */
 	.glass-login-card {
 		width: 100%;
 		max-width: 390px;
-		background: rgba(255, 255, 255, 0.16);
-		backdrop-filter: blur(28px);
-		-webkit-backdrop-filter: blur(28px);
+		background: rgba(38, 24, 18, 0.36);
+		backdrop-filter: blur(22px);
+		-webkit-backdrop-filter: blur(22px);
 		border-radius: 28px;
-		border: 1.5px solid rgba(255, 255, 255, 0.42);
+		border: 1.5px solid rgba(255, 238, 215, 0.45);
 		box-shadow:
-			0 24px 60px rgba(10, 20, 35, 0.35),
-			inset 0 1px 2px rgba(255, 255, 255, 0.65),
-			inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+			0 24px 60px rgba(28, 16, 10, 0.42),
+			inset 0 1px 2px rgba(255, 245, 230, 0.55),
+			inset 0 -1px 2px rgba(0, 0, 0, 0.14);
 		padding: 40px 32px 28px;
 		display: flex;
 		flex-direction: column;
@@ -283,8 +283,8 @@
 	.glass-input-field {
 		width: 100%;
 		height: 48px;
-		background: rgba(255, 255, 255, 0.08);
-		border: 1.2px solid rgba(255, 255, 255, 0.36);
+		background: rgba(255, 250, 244, 0.14);
+		border: 1.2px solid rgba(255, 240, 220, 0.42);
 		border-radius: 14px;
 		padding: 0 46px 0 18px;
 		font-size: 0.9375rem;
@@ -292,20 +292,20 @@
 		outline: none;
 		box-sizing: border-box;
 		transition: all 0.2s ease;
-		box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+		box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 	}
 
 	/* Placeholder styling: visible initially, naturally disappears on type */
 	.glass-input-field::placeholder {
-		color: rgba(255, 255, 255, 0.65);
+		color: rgba(255, 245, 232, 0.78);
 		font-weight: 400;
 	}
 
 	.glass-input-field:focus {
-		background: rgba(255, 255, 255, 0.14);
-		border-color: rgba(255, 255, 255, 0.85);
+		background: rgba(255, 250, 244, 0.22);
+		border-color: rgba(255, 242, 220, 0.9);
 		box-shadow:
-			0 0 0 3px rgba(255, 255, 255, 0.18),
+			0 0 0 3px rgba(255, 230, 195, 0.22),
 			inset 0 1px 2px rgba(0, 0, 0, 0.08);
 	}
 
@@ -313,7 +313,7 @@
 	.glass-input-icon {
 		position: absolute;
 		right: 16px;
-		color: rgba(255, 255, 255, 0.7);
+		color: rgba(255, 245, 232, 0.8);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -325,7 +325,7 @@
 		right: 14px;
 		background: transparent;
 		border: none;
-		color: rgba(255, 255, 255, 0.7);
+		color: rgba(255, 245, 232, 0.8);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -367,33 +367,33 @@
 		width: 18px;
 		height: 18px;
 		border-radius: 5px;
-		background: #6ba5c4;
-		border: 1px solid rgba(255, 255, 255, 0.5);
+		background: #c48a5a;
+		border: 1px solid rgba(255, 240, 220, 0.6);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		transition: background 0.15s ease;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 	}
 
 	.native-checkbox:not(:checked) + .custom-checkbox-box {
-		background: rgba(255, 255, 255, 0.15);
+		background: rgba(255, 255, 255, 0.18);
 	}
 
 	.remember-text {
 		font-size: 0.8125rem;
-		color: rgba(255, 255, 255, 0.92);
+		color: rgba(255, 248, 240, 0.94);
 		font-weight: 500;
-		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 	}
 
-	/* Login Button (matches soft cyan-slate to deep steel blue gradient) */
+	/* Login Button (warm golden-bronze gradient matching the sunset backdrop) */
 	.glass-login-btn {
 		width: 100%;
 		height: 48px;
 		border-radius: 14px;
-		border: 1px solid rgba(255, 255, 255, 0.32);
-		background: linear-gradient(180deg, #6ea8c7 0%, #3a6886 100%);
+		border: 1px solid rgba(255, 238, 210, 0.42);
+		background: linear-gradient(180deg, #d49b6a 0%, #965d38 100%);
 		color: #ffffff;
 		font-size: 1.0625rem;
 		font-weight: 700;
@@ -403,18 +403,18 @@
 		justify-content: center;
 		gap: 8px;
 		box-shadow:
-			0 8px 22px rgba(25, 48, 70, 0.4),
-			inset 0 1px 1px rgba(255, 255, 255, 0.6);
+			0 8px 22px rgba(45, 22, 10, 0.42),
+			inset 0 1px 1px rgba(255, 245, 230, 0.55);
 		transition: all 0.18s ease;
-		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 		margin-top: 4px;
 	}
 	.glass-login-btn:hover:not(:disabled) {
-		background: linear-gradient(180deg, #78b4d4 0%, #447494 100%);
+		background: linear-gradient(180deg, #dfa776 0%, #a56942 100%);
 		transform: translateY(-1px);
 		box-shadow:
-			0 10px 26px rgba(25, 48, 70, 0.48),
-			inset 0 1px 1px rgba(255, 255, 255, 0.7);
+			0 10px 26px rgba(45, 22, 10, 0.48),
+			inset 0 1px 1px rgba(255, 245, 230, 0.65);
 	}
 	.glass-login-btn:active:not(:disabled) {
 		transform: translateY(1px);

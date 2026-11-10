@@ -12,30 +12,28 @@
 	} from '$lib/api/client';
 	import { onMount } from 'svelte';
 
-	// Real data state
 	let recentStudents = $state<StudentProfile[]>([]);
 	let loadingStudents = $state(true);
 	let myProjects = $state<ProjectDetail[]>([]);
 	let exploreProjects = $state<ProjectDetail[]>([]);
+	let openPositions = $state<PositionDetail[]>([]);
 	let loadingProjects = $state(true);
 	let myApplications = $state<ApplicationDetail[]>([]);
 	let myJoinRequests = $state<JoinRequestDetail[]>([]);
 
-	// Filters & search on dashboard project grid
 	let projectSearchQuery = $state('');
 	let selectedCategory = $state('All Categories');
 	let selectedSort = $state('Alphabetical');
 	let viewMode = $state<'grid' | 'list'>('grid');
 	let memberFilterTab = $state<'active' | 'popular' | 'newest'>('active');
-	let groupFilterTab = $state<'active' | 'popular' | 'newest'>('active');
+	let groupFilterTab = $state<'active' | 'newest'>('active');
 
 	const profile = $derived($currentProfile);
 	const user = $derived($currentUser);
 
-	// Calculate profile completeness %
 	const profileCompleteness = $derived.by(() => {
 		if (!profile) return 20;
-		let score = 20; // base registered
+		let score = 20;
 		if (profile.fullName) score += 20;
 		if (profile.headline) score += 15;
 		if (profile.bio) score += 15;
@@ -44,12 +42,19 @@
 		return Math.min(score, 100);
 	});
 
+	const ringRadius = 38;
+	const ringCircumference = 2 * Math.PI * ringRadius;
+	const ringDashOffset = $derived(
+		ringCircumference - (profileCompleteness / 100) * ringCircumference
+	);
+
 	onMount(async () => {
 		try {
-			const [uRes, pMyRes, pListRes, appsRes, reqsRes] = await Promise.all([
-				usersApi.search({ limit: 10 }).catch(() => null),
+			const [uRes, pMyRes, pListRes, posRes, appsRes, reqsRes] = await Promise.all([
+				usersApi.search({ limit: 12 }).catch(() => null),
 				projectsApi.getMyProjects().catch(() => null),
-				projectsApi.list({ limit: 6 }).catch(() => null),
+				projectsApi.list({ limit: 12 }).catch(() => null),
+				positionsApi.list({ isOpen: true, limit: 12 }).catch(() => null),
 				positionsApi.getMyApplications().catch(() => null),
 				projectsApi.getMySentJoinRequests().catch(() => null),
 			]);
@@ -57,17 +62,18 @@
 			if (uRes) recentStudents = uRes.data ?? [];
 			if (pMyRes) myProjects = pMyRes.data ?? [];
 			if (pListRes) exploreProjects = pListRes.data ?? [];
+			if (posRes) openPositions = posRes.data ?? [];
 			if (appsRes) myApplications = appsRes.data ?? [];
 			if (reqsRes) myJoinRequests = reqsRes.data ?? [];
 		} catch {
-			// Non-critical: Dashboard gracefully renders real loaded state
+			// Graceful fallback to empty state
 		} finally {
 			loadingStudents = false;
 			loadingProjects = false;
 		}
 	});
 
-	function getInitials(name: string): string {
+	function getInitials(name?: string | null): string {
 		if (!name) return 'CS';
 		return name
 			.split(' ')
@@ -77,9 +83,23 @@
 			.toUpperCase();
 	}
 
-	// Filtered projects for the dashboard grid
+	const filteredStudents = $derived.by(() => {
+		const list = [...recentStudents];
+		if (memberFilterTab === 'popular') {
+			return list.sort((a, b) => (b.skills?.length ?? 0) - (a.skills?.length ?? 0));
+		}
+		if (memberFilterTab === 'newest') {
+			return list.sort(
+				(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+			);
+		}
+		return list.filter((s) => s.openToCollaborate).length > 0
+			? list.filter((s) => s.openToCollaborate)
+			: list;
+	});
+
 	const filteredDashboardProjects = $derived.by(() => {
-		let list = exploreProjects.length > 0 ? exploreProjects : myProjects;
+		let list = exploreProjects.length > 0 ? [...exploreProjects] : [...myProjects];
 		if (projectSearchQuery.trim()) {
 			const q = projectSearchQuery.toLowerCase();
 			list = list.filter(
@@ -95,208 +115,166 @@
 			);
 		}
 		if (selectedSort === 'Alphabetical') {
-			list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+			list.sort((a, b) => a.name.localeCompare(b.name));
+		} else {
+			list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 		}
 		return list;
 	});
 
-	// Domain illustration gradient theme
+	const filteredGroups = $derived.by(() => {
+		const list = [...myProjects];
+		if (groupFilterTab === 'newest') {
+			return list.sort(
+				(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+			);
+		}
+		return list;
+	});
+
 	function getDomainGradient(domain?: string | null): string {
 		const d = (domain || '').toLowerCase();
 		if (d.includes('ai') || d.includes('ml')) {
-			return 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)';
+			return 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)';
 		}
 		if (d.includes('web') || d.includes('full')) {
-			return 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+			return 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)';
 		}
 		if (d.includes('cloud') || d.includes('devops')) {
-			return 'linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)';
+			return 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
 		}
 		if (d.includes('mobile')) {
 			return 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
 		}
-		return 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)';
+		return 'linear-gradient(135deg, #1d72fe 0%, #3b82f6 100%)';
 	}
 </script>
 
 <svelte:head>
-	<title>Member Dashboard — CollabSphere</title>
+	<title>Dashboard — CollabSphere</title>
 </svelte:head>
 
-<div class="dashboard-container">
-	<!-- Top Liquid Glass Workspace Row (exact matching Screenshot 4) -->
-	<div class="liquid-glass-stage">
-		<!-- Left / Center: 6 Volumetric 3D Pastel Cards (Screenshot 4) -->
-		<div class="volumetric-cards-grid">
-			<!-- Card 1: Lavender (Projects) -->
-			<a href="/projects" class="pastel-card card-lavender" title="View Active Projects">
-				<div class="card-3d-visual">
-					<div class="pill-3d-badge lavender">
-						<span class="badge-capsule"></span>
-					</div>
-				</div>
-				<div class="card-meta-bottom">
-					<span class="card-title-text">Projects</span>
-					<span class="card-count-sub">{myProjects.length + exploreProjects.length} Active</span>
-				</div>
-			</a>
-
-			<!-- Card 2: Lilac (Team) -->
-			<a href="/teams" class="pastel-card card-lilac" title="My Team Collaborations">
-				<div class="card-3d-visual">
-					<div class="sheet-3d-badge lilac">
-						<span class="sheet-line line-1"></span>
-						<span class="sheet-line line-2"></span>
-					</div>
-				</div>
-				<div class="card-meta-bottom">
-					<span class="card-title-text">Team</span>
-					<span class="card-count-sub">{recentStudents.length} Peers</span>
-				</div>
-			</a>
-
-			<!-- Card 3: Blush Pink (Milestones & Invoices / Tasks) -->
-			<a href="/positions" class="pastel-card card-pink" title="Milestones & Open Roles">
-				<div class="card-3d-visual">
-					<div class="capsule-3d-badge pink">
-						<span class="cap-half cap-left"></span>
-						<span class="cap-half cap-right"></span>
-					</div>
-				</div>
-				<div class="card-meta-bottom">
-					<span class="card-title-text">Invoices & Tasks</span>
-					<span class="card-count-sub">{myProjects.length} Sprints</span>
-				</div>
-			</a>
-
-			<!-- Card 4: Mint Green (Reports & Applications) -->
-			<a href="/positions/my-applications" class="pastel-card card-mint" title="My Collaboration Applications">
-				<div class="card-3d-visual">
-					<div class="sheet-3d-badge mint">
-						<span class="sheet-line line-1"></span>
-						<span class="sheet-line line-2"></span>
-						<span class="sheet-line line-3"></span>
-					</div>
-				</div>
-				<div class="card-meta-bottom">
-					<span class="card-title-text">Reports</span>
-					<span class="card-count-sub">{myApplications.length + myJoinRequests.length} Requests</span>
-				</div>
-			</a>
-
-			<!-- Card 5: Soft Teal / Seafoam (Discussions & Team) -->
-			<a href="/projects#discussions" class="pastel-card card-teal" title="Project Discussions">
-				<div class="card-3d-visual">
-					<div class="sheet-3d-badge teal">
-						<span class="sheet-line line-1"></span>
-						<span class="sheet-line line-2"></span>
-					</div>
-				</div>
-				<div class="card-meta-bottom">
-					<span class="card-title-text">Team Forums</span>
-					<span class="card-count-sub">{exploreProjects.length} Topics</span>
-				</div>
-			</a>
-
-			<!-- Card 6: Apricot Peach (Preferences & Profile) -->
-			<a href="/profile/edit" class="pastel-card card-peach" title="Edit Profile & Preferences">
-				<div class="card-3d-visual">
-					<div class="circle-3d-badge peach">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-					</div>
-				</div>
-				<div class="card-meta-bottom">
-					<span class="card-title-text">Preferences</span>
-					<span class="card-count-sub">{profileCompleteness}% Complete</span>
-				</div>
-			</a>
-		</div>
-
-		<!-- Right Side Widgets (Screenshot 4) -->
-		<div class="liquid-right-col">
-			<!-- Donut Completion Ring Card -->
-			<div class="ring-widget-card">
-				<div class="donut-chart-container">
-					<svg width="120" height="120" viewBox="0 0 120 120">
-						<!-- Segment 1: Lavender / Purple -->
-						<circle cx="60" cy="60" r="46" stroke="#c084fc" stroke-width="12" fill="none" stroke-dasharray="72 217" stroke-dashoffset="0" />
-						<!-- Segment 2: Peach / Orange -->
-						<circle cx="60" cy="60" r="46" stroke="#fb923c" stroke-width="12" fill="none" stroke-dasharray="72 217" stroke-dashoffset="-72" />
-						<!-- Segment 3: Mint / Green -->
-						<circle cx="60" cy="60" r="46" stroke="#4ade80" stroke-width="12" fill="none" stroke-dasharray="72 217" stroke-dashoffset="-144" />
-						<!-- Segment 4: Cyan / Blue -->
-						<circle cx="60" cy="60" r="46" stroke="#38bdf8" stroke-width="12" fill="none" stroke-dasharray="73 217" stroke-dashoffset="-216" />
+<div class="dashboard-layout">
+	<!-- Left / Center Primary Column -->
+	<div class="dashboard-main-col">
+		<!-- Welcome Hero Banner (First Screenshot Reference) -->
+		<section class="welcome-hero-card">
+			<div class="hero-left">
+				<div class="avatar-ring-wrap" title="{profileCompleteness}% Profile Complete">
+					<svg class="progress-ring-svg" width="88" height="88" viewBox="0 0 88 88">
+						<circle
+							cx="44"
+							cy="44"
+							r={ringRadius}
+							stroke="rgba(29, 114, 254, 0.16)"
+							stroke-width="4"
+							fill="none"
+						/>
+						<circle
+							cx="44"
+							cy="44"
+							r={ringRadius}
+							stroke="#1D72FE"
+							stroke-width="4"
+							stroke-linecap="round"
+							fill="none"
+							stroke-dasharray={ringCircumference}
+							stroke-dashoffset={ringDashOffset}
+							transform="rotate(-90 44 44)"
+						/>
 					</svg>
-					<div class="donut-center-text">
-						<span class="donut-bold-num">{Math.min(5, Math.max(1, Math.round(profileCompleteness / 20)))}</span>
+					<div class="hero-avatar-inner">
+						{#if profile?.avatarUrl}
+							<img src={profile.avatarUrl} alt={profile.fullName} />
+						{:else}
+							<span>{getInitials(profile?.fullName)}</span>
+						{/if}
 					</div>
 				</div>
-				<span class="donut-step-label">Step {Math.min(5, Math.max(1, Math.round(profileCompleteness / 20)))} of 5</span>
-			</div>
 
-			<!-- Step Checklist / Accordion Card -->
-			<div class="step-accordion-card">
-				<div class="step-item-row next-step">
-					<span class="step-indicator-badge orange">1</span>
-					<span class="step-name">Next</span>
-					<span class="step-range-tag">1-10</span>
-				</div>
-				<div class="step-item-row prev-step">
-					<span class="step-indicator-dot gray"></span>
-					<span class="step-name">Previous</span>
-					<span class="step-chevron">▾</span>
-				</div>
-				<div class="step-item-row prev-step active-step">
-					<span class="step-indicator-dot green"></span>
-					<span class="step-name">Previous</span>
-					<span class="step-chevron">▾</span>
-				</div>
-				<div class="step-item-row prev-step">
-					<span class="step-indicator-dot gray"></span>
-					<span class="step-name">Project</span>
-					<span class="step-chevron">▾</span>
-				</div>
-
-				<div class="step-page-switch-pill">
-					<span>Page Switch</span>
-					<span class="switch-arrow">▾</span>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Bottom Floating Control Dock (Screenshot 4) -->
-	<div class="bottom-floating-dock-row">
-		<div class="floating-glass-dock">
-			<a href="/dashboard" class="dock-icon-btn active" title="Dashboard Home">
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-			</a>
-			<a href="/projects" class="dock-icon-btn" title="Explore Projects">
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-			</a>
-			<a href="/positions/my-applications" class="dock-icon-btn" title="My Applications">
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-			</a>
-			<a href="/projects/new" class="dock-coral-action-btn">
-				+ New Project
-			</a>
-		</div>
-	</div>
-
-	<!-- Main Left/Center Column -->
-	<div class="center-content-column">
-
-		<!-- Members / Peers Section (matching Screenshot 2) -->
-		<section class="dashboard-section-card card">
-			<div class="section-card-header">
-				<div class="section-title-wrap">
-					<span class="section-icon blue">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+				<div class="hero-copy">
+					<span class="hero-completion-text">
+						<strong>{profileCompleteness}%</strong> Profile Complete
 					</span>
-					<h2 class="section-heading">Members</h2>
+					<h1 class="hero-greeting">
+						Welcome, <span>{profile?.fullName?.split(' ')[0] || 'Student'}</span>
+					</h1>
+					<p class="hero-sub">to your Student Collaboration Dashboard</p>
+					<div class="hero-cta-row">
+						<a href="/profile/edit" class="hero-outline-btn">
+							{profileCompleteness < 100 ? 'Complete Profile' : 'Edit Profile'}
+						</a>
+						<a href="/projects/new" class="hero-primary-btn">
+							Create Project
+						</a>
+					</div>
 				</div>
+			</div>
+
+			<!-- Subtle Geometric Decorative Accents matching First Screenshot -->
+			<div class="hero-geo-decor" aria-hidden="true">
+				<span class="geo-circle geo-1"></span>
+				<span class="geo-circle geo-2"></span>
+				<span class="geo-triangle"></span>
+			</div>
+		</section>
+
+		<!-- 4 Pastel Stat Cards Row (First Screenshot Reference) -->
+		<section class="stats-metrics-row" aria-label="Workspace statistics">
+			<a href="/projects" class="stat-metric-card tint-peach">
+				<div class="stat-icon-box orange">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+				</div>
+				<div class="stat-text">
+					<span class="stat-count">{exploreProjects.length}</span>
+					<span class="stat-label">Projects</span>
+				</div>
+			</a>
+
+			<a href="/positions" class="stat-metric-card tint-blue">
+				<div class="stat-icon-box blue">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+				</div>
+				<div class="stat-text">
+					<span class="stat-count">{openPositions.length}</span>
+					<span class="stat-label">Opportunities</span>
+				</div>
+			</a>
+
+			<a href="/discover" class="stat-metric-card tint-mint">
+				<div class="stat-icon-box green">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+				</div>
+				<div class="stat-text">
+					<span class="stat-count">{recentStudents.length}</span>
+					<span class="stat-label">Student Peers</span>
+				</div>
+			</a>
+
+			<a href="/positions/my-applications" class="stat-metric-card tint-lavender">
+				<div class="stat-icon-box purple">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+				</div>
+				<div class="stat-text">
+					<span class="stat-count">{myApplications.length + myJoinRequests.length}</span>
+					<span class="stat-label">Applications</span>
+				</div>
+			</a>
+		</section>
+
+		<!-- Members Section (First Screenshot Reference) -->
+		<section class="section-card card">
+			<div class="section-header-bar">
+				<div class="section-title-group">
+					<span class="section-icon blue">
+						<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+					</span>
+					<h2 class="section-title">Members</h2>
+				</div>
+
 				<div class="section-tabs-row">
 					<button
+						type="button"
 						class="tab-pill-btn"
 						class:active={memberFilterTab === 'active'}
 						onclick={() => (memberFilterTab = 'active')}
@@ -304,6 +282,7 @@
 						Active
 					</button>
 					<button
+						type="button"
 						class="tab-pill-btn"
 						class:active={memberFilterTab === 'popular'}
 						onclick={() => (memberFilterTab = 'popular')}
@@ -311,71 +290,78 @@
 						Popular
 					</button>
 					<button
+						type="button"
 						class="tab-pill-btn"
 						class:active={memberFilterTab === 'newest'}
 						onclick={() => (memberFilterTab = 'newest')}
 					>
 						Newest
 					</button>
+					<a href="/discover" class="section-see-all">View All</a>
 				</div>
 			</div>
 
 			{#if loadingStudents}
 				<div class="members-loading-row">
-					{#each Array(6) as _}
+					{#each Array(5) as _}
 						<div class="skeleton member-circle-skeleton"></div>
 					{/each}
 				</div>
-			{:else if recentStudents.length === 0}
-				<p class="empty-state-text">No active members found yet. Connect with students to collaborate!</p>
+			{:else if filteredStudents.length === 0}
+				<div class="empty-inline-state">
+					<p>No student members found yet. Invite classmates or update your profile visibility.</p>
+				</div>
 			{:else}
 				<div class="members-carousel-row">
-					{#each recentStudents.slice(0, 7) as student}
-						<a href="/profile/{student.username}" class="member-profile-circle-card" title={student.fullName}>
-							<div class="member-circle-wrap">
-								<div class="member-avatar-img">
+					{#each filteredStudents.slice(0, 7) as student}
+						<a href="/profile/{student.username}" class="member-card-item" title={student.fullName}>
+							<div class="member-avatar-wrap">
+								<div class="member-avatar-circle">
 									{#if student.avatarUrl}
 										<img src={student.avatarUrl} alt={student.fullName} />
 									{:else}
-										<span class="member-avatar-fallback">{getInitials(student.fullName)}</span>
+										<span>{getInitials(student.fullName)}</span>
 									{/if}
 								</div>
-								<span class="online-indicator-dot" title="Active"></span>
+								{#if student.openToCollaborate}
+									<span class="online-dot" title="Open to Collaborate"></span>
+								{/if}
 							</div>
-							<span class="member-name-label">{student.fullName.split(' ').slice(0, 2).join(' ')}</span>
+							<span class="member-name">{student.fullName}</span>
 						</a>
 					{/each}
 				</div>
 			{/if}
 		</section>
 
-		<!-- Courses / Projects Grid Section (matching Screenshot 2) -->
-		<section class="dashboard-section-card card">
-			<div class="section-card-header flex-between">
-				<div class="section-title-wrap">
+		<!-- Projects Grid Section (First Screenshot Reference) -->
+		<section class="section-card card">
+			<div class="section-header-bar wrap-toolbar">
+				<div class="section-title-group">
 					<span class="section-icon blue">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+						<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
 					</span>
-					<h2 class="section-heading">Courses & Projects</h2>
+					<h2 class="section-title">Projects</h2>
 				</div>
 
-				<div class="controls-toolbar-row">
-					<div class="search-mini-wrap">
+				<div class="projects-toolbar">
+					<div class="search-mini-box">
 						<svg class="search-mini-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 						<input
 							type="text"
 							class="search-mini-input"
 							placeholder="Search Projects..."
 							bind:value={projectSearchQuery}
+							aria-label="Filter dashboard projects"
 						/>
 					</div>
 
-					<select bind:value={selectedSort} class="toolbar-select">
+					<select bind:value={selectedSort} class="toolbar-select" aria-label="Sort projects">
 						<option value="Alphabetical">Alphabetical</option>
 						<option value="Recent">Newest First</option>
 					</select>
 
-					<select bind:value={selectedCategory} class="toolbar-select">
+					<select bind:value={selectedCategory} class="toolbar-select" aria-label="Filter by category">
 						<option value="All Categories">All Categories</option>
 						<option value="Web Dev">Web Dev</option>
 						<option value="AI/ML">AI/ML</option>
@@ -383,8 +369,9 @@
 						<option value="Cloud">Cloud/DevOps</option>
 					</select>
 
-					<div class="view-toggle-btns">
+					<div class="view-toggle-group">
 						<button
+							type="button"
 							class="view-toggle-btn"
 							class:active={viewMode === 'grid'}
 							onclick={() => (viewMode = 'grid')}
@@ -393,6 +380,7 @@
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
 						</button>
 						<button
+							type="button"
 							class="view-toggle-btn"
 							class:active={viewMode === 'list'}
 							onclick={() => (viewMode = 'list')}
@@ -404,62 +392,50 @@
 				</div>
 			</div>
 
-			<!-- Project Cards Grid -->
 			{#if loadingProjects}
-				<div class="projects-dashboard-grid">
+				<div class="projects-grid">
 					{#each Array(3) as _}
 						<div class="skeleton project-card-skeleton"></div>
 					{/each}
 				</div>
 			{:else if filteredDashboardProjects.length === 0}
-				<div class="empty-projects-state">
-					<p>No projects match your filter.</p>
-					<a href="/projects/new" class="create-first-btn">+ Start a Project</a>
+				<div class="empty-projects-box">
+					<p>No active projects available right now.</p>
+					<div class="empty-cta-row">
+						<a href="/projects/new" class="btn-primary-sm">Create Project</a>
+						<a href="/projects" class="btn-outline-sm">Explore Projects</a>
+					</div>
 				</div>
 			{:else}
-				<div class="projects-dashboard-grid {viewMode === 'list' ? 'list-layout' : ''}">
+				<div class="projects-grid {viewMode === 'list' ? 'list-layout' : ''}">
 					{#each filteredDashboardProjects.slice(0, 6) as proj}
-						<a href="/projects/{proj.id}" class="project-grid-card">
-							<!-- Card Cover Top -->
-							<div class="card-cover-banner" style="background: {getDomainGradient(proj.domain)}">
+						{@const memberCount = proj.members?.length || 1}
+						{@const capacity = proj.teamSize || 4}
+						{@const pct = Math.min(100, Math.round((memberCount / capacity) * 100))}
+						<a href="/projects/{proj.id}" class="project-card">
+							<div class="project-cover" style="background: {getDomainGradient(proj.domain)}">
 								<span class="cover-domain-tag">{proj.domain || 'Project'}</span>
-								<span class="cover-start-badge">START COURSE</span>
+								<span class="cover-action-pill">View Project</span>
 							</div>
 
-							<!-- Card Info -->
-							<div class="card-body-content">
-								<h3 class="card-proj-title">{proj.name}</h3>
+							<div class="project-body">
+								<h3 class="project-title">{proj.name}</h3>
+								<p class="project-summary">
+									{proj.tagline || (proj.description ? proj.description.slice(0, 72) + '...' : 'Student collaboration project')}
+								</p>
 
-								<div class="rating-stars-row">
-									<span class="star filled">★</span>
-									<span class="star filled">★</span>
-									<span class="star filled">★</span>
-									<span class="star filled">★</span>
-									<span class="star filled">★</span>
-									<span class="rating-text">(5.0)</span>
-									<span class="progress-percent">
-										{Math.min(100, Math.round(((proj.members?.length || 1) / (proj.teamSize || 4)) * 100))}%
-									</span>
+								<div class="capacity-header">
+									<span class="capacity-label">Team Capacity ({memberCount}/{capacity})</span>
+									<span class="capacity-pct">{pct}%</span>
+								</div>
+								<div class="capacity-bar">
+									<div class="capacity-fill" style="width: {pct}%"></div>
 								</div>
 
-								<div class="project-capacity-bar-wrap">
-									<div
-										class="capacity-fill"
-										style="width: {Math.min(100, Math.round(((proj.members?.length || 1) / (proj.teamSize || 4)) * 100))}%"
-									></div>
-								</div>
-
-								<div class="card-meta-indicators">
-									<span class="meta-item-box orange">
-										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-										{proj.teamSize || 4} Members
-									</span>
-									<span class="meta-item-box green">
-										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-										{proj.skills?.length || 1} Skills
-									</span>
-									<span class="meta-item-box purple">
-										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+								<div class="project-meta-chips">
+									<span class="meta-chip orange">{capacity} Members</span>
+									<span class="meta-chip green">{proj.skills?.length || 0} Skills</span>
+									<span class="meta-chip purple">
 										{proj.recruitmentStatus === 'open' ? 'Recruiting' : 'Closed'}
 									</span>
 								</div>
@@ -471,37 +447,37 @@
 		</section>
 	</div>
 
-	<!-- Right Column: Sidebar Widgets (matching Screenshot 2) -->
-	<aside class="right-widgets-column">
-		<!-- Forums Widget -->
+	<!-- Right Widgets Column (First Screenshot Reference) -->
+	<aside class="dashboard-right-col" aria-label="Dashboard activity and quick lists">
+		<!-- Discussions Widget -->
 		<div class="widget-card card">
 			<div class="widget-header">
 				<div class="widget-title-wrap">
 					<span class="widget-icon blue">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 					</span>
-					<h3 class="widget-title">Forums</h3>
+					<h3 class="widget-title">Discussions</h3>
 				</div>
-				<a href="/projects#discussions" class="widget-see-all blue">See All</a>
+				<a href="/projects" class="widget-link blue">View All</a>
 			</div>
 
-			<div class="widget-items-list">
+			<div class="widget-list">
 				{#if exploreProjects.length === 0}
-					<p class="widget-empty">No forum discussions yet.</p>
+					<p class="widget-empty">No active project discussions yet.</p>
 				{:else}
 					{#each exploreProjects.slice(0, 3) as item}
-						<a href="/projects/{item.id}#discussions" class="forum-item-row">
-							<div class="item-avatar-circle">
+						<a href="/projects/{item.id}#discussions" class="widget-row-item">
+							<div class="widget-avatar-circle">
 								{#if item.creatorAvatarUrl}
 									<img src={item.creatorAvatarUrl} alt={item.creatorName} />
 								{:else}
 									<span>{getInitials(item.creatorName)}</span>
 								{/if}
 							</div>
-							<div class="forum-item-info">
-								<h4 class="forum-item-title">{item.name}</h4>
-								<p class="forum-item-snippet">
-									{item.description ? item.description.slice(0, 48) + '...' : 'Open collaboration thread for project contributors...'}
+							<div class="widget-row-text">
+								<h4 class="widget-row-title">{item.name}</h4>
+								<p class="widget-row-sub">
+									{item.description ? item.description.slice(0, 48) + '...' : 'Open project discussion'}
 								</p>
 							</div>
 						</a>
@@ -515,58 +491,62 @@
 			<div class="widget-header">
 				<div class="widget-title-wrap">
 					<span class="widget-icon purple">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
 					</span>
 					<h3 class="widget-title">Activity</h3>
 				</div>
-				<a href="/positions/my-applications" class="widget-see-all purple">See All</a>
+				<a href="/positions/my-applications" class="widget-link purple">View All</a>
 			</div>
 
-			<div class="widget-items-list">
+			<div class="widget-list">
 				{#if myApplications.length === 0 && myJoinRequests.length === 0}
-					<div class="activity-item-row">
-						<div class="item-avatar-circle purple">
-							<span>{profile ? getInitials(profile.fullName) : 'CS'}</span>
-						</div>
-						<div class="activity-item-info">
-							<p class="activity-text">
-								<strong>{profile?.fullName?.split(' ')[0] || 'You'}</strong> registered on CollabSphere
-							</p>
-							<span class="activity-time">Active now</span>
-						</div>
-					</div>
+					<p class="widget-empty">No recent applications or join requests yet.</p>
 				{:else}
 					{#each myJoinRequests.slice(0, 3) as req}
-						<div class="activity-item-row">
-							<div class="item-avatar-circle purple">
-								<span>{profile ? getInitials(profile.fullName) : 'CS'}</span>
+						<a href="/projects/{req.projectId}" class="widget-row-item">
+							<div class="widget-avatar-circle purple">
+								<span>{getInitials(profile?.fullName)}</span>
 							</div>
-							<div class="activity-item-info">
-								<p class="activity-text">
-									<strong>{profile?.fullName?.split(' ')[0] || 'You'}</strong> requested to join {req.projectName || 'a project'}
+							<div class="widget-row-text">
+								<p class="widget-activity-copy">
+									Requested to join <strong>{req.projectName || 'a project'}</strong>
 								</p>
-								<span class="activity-time">{new Date(req.createdAt).toLocaleDateString()}</span>
+								<span class="widget-time">{new Date(req.createdAt).toLocaleDateString()}</span>
 							</div>
-						</div>
+						</a>
+					{/each}
+					{#each myApplications.slice(0, 2) as app}
+						<a href="/positions/my-applications" class="widget-row-item">
+							<div class="widget-avatar-circle purple">
+								<span>{getInitials(profile?.fullName)}</span>
+							</div>
+							<div class="widget-row-text">
+								<p class="widget-activity-copy">
+									Applied for <strong>{app.positionTitle}</strong>
+								</p>
+								<span class="widget-time">{new Date(app.createdAt).toLocaleDateString()}</span>
+							</div>
+						</a>
 					{/each}
 				{/if}
 			</div>
 		</div>
 
-		<!-- Groups Widget -->
+		<!-- My Teams Widget -->
 		<div class="widget-card card">
 			<div class="widget-header">
 				<div class="widget-title-wrap">
 					<span class="widget-icon green">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
 					</span>
-					<h3 class="widget-title">Groups</h3>
+					<h3 class="widget-title">My Teams</h3>
 				</div>
-				<a href="/discover" class="widget-see-all green">See All</a>
+				<a href="/teams" class="widget-link green">View All</a>
 			</div>
 
 			<div class="widget-tabs-row">
 				<button
+					type="button"
 					class="widget-tab-btn"
 					class:active={groupFilterTab === 'active'}
 					onclick={() => (groupFilterTab = 'active')}
@@ -574,13 +554,7 @@
 					Active
 				</button>
 				<button
-					class="widget-tab-btn"
-					class:active={groupFilterTab === 'popular'}
-					onclick={() => (groupFilterTab = 'popular')}
-				>
-					Popular
-				</button>
-				<button
+					type="button"
 					class="widget-tab-btn"
 					class:active={groupFilterTab === 'newest'}
 					onclick={() => (groupFilterTab = 'newest')}
@@ -589,26 +563,18 @@
 				</button>
 			</div>
 
-			<div class="widget-items-list">
-				{#if myProjects.length === 0}
-					<div class="group-item-row">
-						<div class="group-icon-circle green">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-						</div>
-						<div class="group-item-info">
-							<h4 class="group-item-name">CollabSphere Cohort</h4>
-							<span class="group-status-time">active now</span>
-						</div>
-					</div>
+			<div class="widget-list">
+				{#if filteredGroups.length === 0}
+					<p class="widget-empty">No active project teams yet.</p>
 				{:else}
-					{#each myProjects.slice(0, 3) as proj}
-						<a href="/projects/{proj.id}" class="group-item-row">
-							<div class="group-icon-circle green">
-								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+					{#each filteredGroups.slice(0, 3) as proj}
+						<a href="/projects/{proj.id}" class="widget-row-item">
+							<div class="widget-avatar-circle green">
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
 							</div>
-							<div class="group-item-info">
-								<h4 class="group-item-name">{proj.name}</h4>
-								<span class="group-status-time">{proj.members?.length || 1} members active</span>
+							<div class="widget-row-text">
+								<h4 class="widget-row-title">{proj.name}</h4>
+								<span class="widget-time">{proj.members?.length || 1} members</span>
 							</div>
 						</a>
 					{/each}
@@ -619,469 +585,408 @@
 </div>
 
 <style>
-	.dashboard-container {
-		display: flex;
-		flex-direction: column;
-		gap: 28px;
-		max-width: 1200px;
-		margin: 0 auto;
-	}
-
-	/* Top Liquid Glass Workspace Row (Screenshot 4) */
-	.liquid-glass-stage {
+	.dashboard-layout {
 		display: grid;
-		grid-template-columns: 1fr 280px;
+		grid-template-columns: 1fr 310px;
 		gap: 24px;
-		align-items: stretch;
+		align-items: start;
 	}
 
-	/* 6 Volumetric 3D Pastel Cards Grid (Screenshot 4) */
-	.volumetric-cards-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 16px;
-	}
-
-	.pastel-card {
-		border-radius: 20px;
-		padding: 22px 18px 18px;
+	.dashboard-main-col {
 		display: flex;
 		flex-direction: column;
-		justify-content: space-between;
-		min-height: 140px;
-		text-decoration: none;
-		position: relative;
-		overflow: hidden;
-		transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-		border: 1px solid rgba(255, 255, 255, 0.9);
-		box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.95);
-	}
-	.pastel-card:hover {
-		transform: translateY(-3px);
-		box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.95);
-	}
-
-	.card-lavender { background: linear-gradient(135deg, #eaeafb 0%, #dedef8 100%); }
-	.card-lilac { background: linear-gradient(135deg, #eeebf8 0%, #e3def2 100%); }
-	.card-pink { background: linear-gradient(135deg, #fdeef1 0%, #f9e2e6 100%); }
-	.card-mint { background: linear-gradient(135deg, #e3f8eb 0%, #d5f2df 100%); }
-	.card-teal { background: linear-gradient(135deg, #e0f5f2 0%, #d0eee9 100%); }
-	.card-peach { background: linear-gradient(135deg, #fff0e6 0%, #fae2d4 100%); }
-
-	.card-3d-visual {
-		display: flex;
-		align-items: center;
-		justify-content: flex-start;
-		min-height: 48px;
-	}
-
-	/* 3D Skeuomorphic Badges (Screenshot 4) */
-	.pill-3d-badge {
-		width: 44px;
-		height: 24px;
-		border-radius: 9999px;
-		background: #8b5cf6;
-		box-shadow: 0 4px 10px rgba(139, 92, 246, 0.35), inset 0 2px 2px rgba(255, 255, 255, 0.7);
-		display: flex;
-		align-items: center;
-		padding: 3px;
-	}
-	.pill-3d-badge.lavender {
-		background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
-	}
-
-	.sheet-3d-badge {
-		width: 36px;
-		height: 38px;
-		border-radius: 8px;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		gap: 4px;
-		padding: 6px 8px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.9);
-	}
-	.sheet-3d-badge.lilac { background: #ffffff; border: 1px solid #e2e8f0; }
-	.sheet-3d-badge.mint { background: #ffffff; border: 1px solid #d1fae5; }
-	.sheet-3d-badge.teal { background: #ffffff; border: 1px solid #ccfbf1; }
-
-	.sheet-line {
-		height: 3px;
-		border-radius: 9999px;
-		background: #cbd5e1;
-	}
-	.sheet-3d-badge.mint .sheet-line { background: #34d399; }
-	.sheet-3d-badge.teal .sheet-line { background: #2dd4bf; }
-	.line-1 { width: 80%; }
-	.line-2 { width: 55%; }
-	.line-3 { width: 65%; }
-
-	/* Dual-color Capsule (Screenshot 4) */
-	.capsule-3d-badge {
-		width: 48px;
-		height: 24px;
-		border-radius: 9999px;
-		display: flex;
-		overflow: hidden;
-		box-shadow: 0 4px 12px rgba(244, 63, 94, 0.25), inset 0 2px 3px rgba(255, 255, 255, 0.8);
-		transform: rotate(-15deg);
-	}
-	.cap-half { flex: 1; height: 100%; }
-	.cap-left { background: #ff7066; }
-	.cap-right { background: #ffffff; }
-
-	.circle-3d-badge {
-		width: 36px;
-		height: 36px;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25), inset 0 2px 2px rgba(255, 255, 255, 0.7);
-	}
-	.circle-3d-badge.peach { background: #ff7066; }
-
-	.card-meta-bottom {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	.card-title-text {
-		font-size: 0.9375rem;
-		font-weight: 700;
-		color: #1e293b;
-	}
-	.card-count-sub {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: #64748b;
-	}
-
-	/* Right Side Widgets (Screenshot 4) */
-	.liquid-right-col {
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-	}
-
-	/* Donut Completion Ring Card */
-	.ring-widget-card {
-		background: rgba(255, 255, 255, 0.75);
-		backdrop-filter: blur(20px);
-		border-radius: 20px;
-		border: 1px solid rgba(255, 255, 255, 0.9);
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
-		padding: 20px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-	}
-	.donut-chart-container {
-		position: relative;
-		width: 120px;
-		height: 120px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.donut-center-text {
-		position: absolute;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.donut-bold-num {
-		font-size: 1.75rem;
-		font-weight: 800;
-		color: #1e293b;
-	}
-	.donut-step-label {
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: #64748b;
-	}
-
-	/* Step Checklist / Accordion Card (Screenshot 4) */
-	.step-accordion-card {
-		background: rgba(255, 255, 255, 0.75);
-		backdrop-filter: blur(20px);
-		border-radius: 20px;
-		border: 1px solid rgba(255, 255, 255, 0.9);
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
-		padding: 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-	.step-item-row {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 6px 8px;
-		border-radius: 8px;
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: #475569;
-	}
-	.step-indicator-badge {
-		width: 18px;
-		height: 18px;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 0.6875rem;
-		font-weight: 700;
-		color: #ffffff;
-	}
-	.step-indicator-badge.orange { background: #fb923c; }
-	.step-indicator-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-	}
-	.step-indicator-dot.gray { background: #cbd5e1; }
-	.step-indicator-dot.green { background: #10b981; }
-
-	.step-name { flex: 1; }
-	.step-range-tag {
-		font-size: 0.6875rem;
-		color: #94a3b8;
-	}
-	.step-chevron {
-		color: #94a3b8;
-		font-size: 0.75rem;
-	}
-
-	.step-page-switch-pill {
-		margin-top: 6px;
-		padding: 6px 14px;
-		background: #ffffff;
-		border: 1px solid #e2e8f0;
-		border-radius: 9999px;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: #64748b;
-		cursor: pointer;
-	}
-
-	/* Bottom Floating Glass Dock (Screenshot 4) */
-	.bottom-floating-dock-row {
-		display: flex;
-		justify-content: center;
-		margin: 8px 0 16px;
-	}
-	.floating-glass-dock {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 6px 12px 6px 18px;
-		background: rgba(255, 255, 255, 0.75);
-		backdrop-filter: blur(20px);
-		border: 1px solid rgba(255, 255, 255, 0.95);
-		border-radius: 9999px;
-		box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.95);
-	}
-	.dock-icon-btn {
-		width: 34px;
-		height: 34px;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: #64748b;
-		text-decoration: none;
-		transition: all 0.15s ease;
-	}
-	.dock-icon-btn:hover { background: #ffffff; color: #ff7066; }
-	.dock-icon-btn.active { color: #ff7066; background: #ffe4e2; }
-
-	.dock-coral-action-btn {
-		padding: 7px 20px;
-		border-radius: 9999px;
-		background: linear-gradient(135deg, #ff7e72 0%, #ff5d52 100%);
-		color: #ffffff;
-		font-size: 0.8125rem;
-		font-weight: 700;
-		text-decoration: none;
-		box-shadow: 0 4px 14px rgba(255, 112, 102, 0.38);
-		transition: transform 0.15s ease;
-	}
-	.dock-coral-action-btn:hover { transform: scale(1.03); }
-
-	.center-content-column {
-		display: flex;
-		flex-direction: column;
-		gap: 24px;
+		gap: 20px;
 		min-width: 0;
 	}
 
-	/* Dashboard Sections */
-	.dashboard-section-card {
-		background: #ffffff;
-		border-radius: 24px;
-		padding: 24px 28px;
-		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03);
-		border: 1px solid rgba(226, 232, 240, 0.7);
-	}
-
-	.section-card-header {
+	/* Welcome Hero Banner */
+	.welcome-hero-card {
+		background: linear-gradient(125deg, #f0f7ff 0%, #dcecff 58%, #cae2ff 100%);
+		border: 1px solid #d5e6fc;
+		border-radius: 20px;
+		padding: 26px 30px;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 20px;
-		flex-wrap: wrap;
-		gap: 12px;
+		position: relative;
+		overflow: hidden;
+		box-shadow: 0 4px 18px rgba(29, 114, 254, 0.06);
 	}
 
-	.section-title-wrap {
+	.hero-left {
+		display: flex;
+		align-items: center;
+		gap: 22px;
+		position: relative;
+		z-index: 2;
+	}
+
+	.avatar-ring-wrap {
+		position: relative;
+		width: 88px;
+		height: 88px;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.progress-ring-svg {
+		position: absolute;
+		inset: 0;
+	}
+
+	.hero-avatar-inner {
+		width: 68px;
+		height: 68px;
+		border-radius: 50%;
+		background: linear-gradient(135deg, #2563eb, #1d72fe);
+		color: #ffffff;
+		font-size: 1.25rem;
+		font-weight: 800;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+		border: 3px solid #ffffff;
+		box-shadow: 0 4px 12px rgba(29, 114, 254, 0.22);
+	}
+	.hero-avatar-inner img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.hero-copy {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.hero-completion-text {
+		font-size: 0.75rem;
+		color: #2563eb;
+		font-weight: 500;
+	}
+
+	.hero-greeting {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #0f172a;
+		margin: 0;
+		line-height: 1.2;
+	}
+	.hero-greeting span {
+		font-weight: 800;
+	}
+
+	.hero-sub {
+		font-size: 0.875rem;
+		color: #475569;
+		margin: 0 0 10px 0;
+	}
+
+	.hero-cta-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.hero-outline-btn {
+		padding: 8px 16px;
+		border-radius: 9999px;
+		border: 1.5px solid #60a5fa;
+		background: rgba(255, 255, 255, 0.85);
+		color: #1d72fe;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		text-decoration: none;
+		transition: all 0.16s ease;
+	}
+	.hero-outline-btn:hover {
+		background: #ffffff;
+		border-color: #1d72fe;
+		text-decoration: none;
+	}
+
+	.hero-primary-btn {
+		padding: 8px 18px;
+		border-radius: 9999px;
+		background: #1d72fe;
+		color: #ffffff;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		text-decoration: none;
+		box-shadow: 0 4px 12px rgba(29, 114, 254, 0.28);
+		transition: background 0.16s ease;
+	}
+	.hero-primary-btn:hover {
+		background: #155bd5;
+		text-decoration: none;
+	}
+
+	.hero-geo-decor {
+		position: relative;
+		width: 140px;
+		height: 90px;
+		flex-shrink: 0;
+	}
+	.geo-circle {
+		position: absolute;
+		border-radius: 50%;
+	}
+	.geo-1 {
+		width: 64px;
+		height: 64px;
+		background: rgba(96, 165, 250, 0.25);
+		right: 10px;
+		top: 0;
+	}
+	.geo-2 {
+		width: 40px;
+		height: 40px;
+		border: 3px solid rgba(29, 114, 254, 0.25);
+		right: 68px;
+		bottom: 4px;
+	}
+	.geo-triangle {
+		position: absolute;
+		right: 4px;
+		bottom: -6px;
+		width: 0;
+		height: 0;
+		border-left: 28px solid transparent;
+		border-right: 28px solid transparent;
+		border-bottom: 48px solid rgba(59, 130, 246, 0.24);
+	}
+
+	/* 4 Pastel Stat Cards */
+	.stats-metrics-row {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 14px;
+	}
+
+	.stat-metric-card {
+		border-radius: 16px;
+		padding: 16px 18px;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		text-decoration: none;
+		border: 1px solid rgba(255, 255, 255, 0.9);
+		transition: transform 0.15s ease, box-shadow 0.15s ease;
+	}
+	.stat-metric-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+		text-decoration: none;
+	}
+
+	.tint-peach { background: #fff4ed; }
+	.tint-blue { background: #eff6ff; }
+	.tint-mint { background: #ecfdf5; }
+	.tint-lavender { background: #f5f3ff; }
+
+	.stat-icon-box {
+		width: 42px;
+		height: 42px;
+		border-radius: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+	.stat-icon-box.orange { background: #ffedd5; color: #ea580c; }
+	.stat-icon-box.blue { background: #dbeafe; color: #2563eb; }
+	.stat-icon-box.green { background: #dcfce7; color: #16a34a; }
+	.stat-icon-box.purple { background: #ede9fe; color: #9333ea; }
+
+	.stat-text {
+		display: flex;
+		flex-direction: column;
+	}
+	.stat-count {
+		font-size: 1.375rem;
+		font-weight: 800;
+		color: #0f172a;
+		line-height: 1.1;
+	}
+	.stat-label {
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: #64748b;
+		margin-top: 2px;
+	}
+
+	/* White Content Cards */
+	.section-card {
+		padding: 22px 24px;
+		background: #ffffff;
+		border-radius: 20px;
+		border: 1px solid #e6edf5;
+	}
+
+	.section-header-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		margin-bottom: 18px;
+	}
+	.wrap-toolbar {
+		flex-wrap: wrap;
+	}
+
+	.section-title-group {
 		display: flex;
 		align-items: center;
 		gap: 10px;
 	}
 
 	.section-icon {
+		width: 32px;
+		height: 32px;
+		border-radius: 10px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 	}
-	.section-icon.blue { color: #1d72fe; }
+	.section-icon.blue {
+		background: #eff6ff;
+		color: #1d72fe;
+	}
 
-	.section-heading {
-		font-size: 1.25rem;
-		font-weight: 800;
-		color: #1e293b;
+	.section-title {
+		font-size: 1.0625rem;
+		font-weight: 700;
+		color: #0f172a;
 		margin: 0;
 	}
 
 	.section-tabs-row {
 		display: flex;
 		align-items: center;
-		gap: 16px;
+		gap: 8px;
 	}
 
 	.tab-pill-btn {
-		background: none;
+		padding: 5px 12px;
+		border-radius: 8px;
 		border: none;
-		font-size: 0.875rem;
+		background: transparent;
+		font-size: 0.8125rem;
 		font-weight: 600;
-		color: #94a3b8;
+		color: #64748b;
 		cursor: pointer;
-		padding: 4px 0;
-		position: relative;
-		transition: color 0.15s ease;
 	}
-	.tab-pill-btn:hover { color: #1e293b; }
 	.tab-pill-btn.active {
 		color: #1d72fe;
-	}
-	.tab-pill-btn.active::after {
-		content: '';
-		position: absolute;
-		bottom: -2px;
-		left: 0;
-		right: 0;
-		height: 3px;
-		background: #1d72fe;
-		border-radius: 9999px;
+		background: #eff6ff;
 	}
 
-	/* Members Carousel (matching Screenshot 2) */
+	.section-see-all {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: #1d72fe;
+		margin-left: 6px;
+		text-decoration: none;
+	}
+	.section-see-all:hover {
+		text-decoration: underline;
+	}
+
+	/* Members Carousel Row */
 	.members-carousel-row {
 		display: flex;
-		align-items: center;
-		gap: 20px;
+		gap: 14px;
 		overflow-x: auto;
-		padding: 8px 4px 12px;
+		padding-bottom: 4px;
 	}
 
-	.member-profile-circle-card {
+	.member-card-item {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		gap: 8px;
+		padding: 14px 12px;
+		min-width: 112px;
+		border-radius: 14px;
+		border: 1px solid #f1f5f9;
+		background: #fafcff;
 		text-decoration: none;
-		flex-shrink: 0;
-		transition: transform 0.15s ease;
+		transition: border-color 0.15s ease, transform 0.15s ease;
 	}
-	.member-profile-circle-card:hover {
-		transform: translateY(-3px);
+	.member-card-item:hover {
+		border-color: #bfdbfe;
+		transform: translateY(-2px);
+		text-decoration: none;
 	}
 
-	.member-circle-wrap {
+	.member-avatar-wrap {
 		position: relative;
-		width: 64px;
-		height: 64px;
 	}
-
-	.member-avatar-img {
-		width: 100%;
-		height: 100%;
+	.member-avatar-circle {
+		width: 54px;
+		height: 54px;
 		border-radius: 50%;
-		overflow: hidden;
-		background: #eff6ff;
-		border: 2px solid #93c5fd;
+		background: linear-gradient(135deg, #3b82f6, #1d72fe);
+		color: #ffffff;
+		font-weight: 700;
+		font-size: 0.9375rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		overflow: hidden;
 	}
-	.member-avatar-img img {
+	.member-avatar-circle img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
 	}
-	.member-avatar-fallback {
-		font-size: 1rem;
-		font-weight: 700;
-		color: #1d72fe;
-	}
 
-	.online-indicator-dot {
+	.online-dot {
 		position: absolute;
 		bottom: 2px;
 		right: 2px;
-		width: 12px;
-		height: 12px;
+		width: 11px;
+		height: 11px;
 		border-radius: 50%;
 		background: #10b981;
 		border: 2px solid #ffffff;
 	}
 
-	.member-name-label {
+	.member-name {
 		font-size: 0.8125rem;
-		font-weight: 700;
-		color: #334155;
-		white-space: nowrap;
+		font-weight: 600;
+		color: #1e293b;
 		text-align: center;
-		max-width: 76px;
+		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		max-width: 100px;
 	}
 
 	.members-loading-row {
 		display: flex;
-		gap: 20px;
+		gap: 14px;
 	}
 	.member-circle-skeleton {
-		width: 64px;
-		height: 64px;
-		border-radius: 50%;
+		width: 112px;
+		height: 108px;
+		border-radius: 14px;
 	}
 
-	/* Controls Toolbar */
-	.controls-toolbar-row {
+	/* Projects Toolbar */
+	.projects-toolbar {
 		display: flex;
 		align-items: center;
-		gap: 12px;
+		gap: 10px;
 		flex-wrap: wrap;
 	}
 
-	.search-mini-wrap {
+	.search-mini-box {
 		position: relative;
 		display: flex;
 		align-items: center;
@@ -1093,430 +998,378 @@
 		pointer-events: none;
 	}
 	.search-mini-input {
-		height: 36px;
-		border-radius: 9999px;
-		background: #f8fafc;
+		height: 34px;
+		width: 170px;
+		border-radius: 9px;
 		border: 1px solid #e2e8f0;
-		padding: 0 12px 0 30px;
+		background: #f8fafc;
+		padding: 0 10px 0 30px;
 		font-size: 0.8125rem;
-		color: #1e293b;
+		color: #0f172a;
 		outline: none;
 	}
-	.search-mini-input:focus { border-color: #1d72fe; }
+	.search-mini-input:focus {
+		border-color: #1d72fe;
+		background: #ffffff;
+	}
 
 	.toolbar-select {
-		height: 36px;
-		border-radius: 9999px;
-		background: #f8fafc;
+		height: 34px;
+		border-radius: 9px;
 		border: 1px solid #e2e8f0;
-		padding: 0 12px;
+		background: #ffffff;
+		padding: 0 10px;
 		font-size: 0.8125rem;
 		color: #475569;
 		outline: none;
 	}
 
-	.view-toggle-btns {
+	.view-toggle-group {
 		display: flex;
-		align-items: center;
 		border: 1px solid #e2e8f0;
-		border-radius: 8px;
+		border-radius: 9px;
 		overflow: hidden;
 	}
 	.view-toggle-btn {
-		background: #ffffff;
+		width: 32px;
+		height: 32px;
 		border: none;
-		padding: 8px 10px;
-		color: #94a3b8;
-		cursor: pointer;
+		background: #ffffff;
+		color: #64748b;
 		display: flex;
 		align-items: center;
+		justify-content: center;
+		cursor: pointer;
 	}
 	.view-toggle-btn.active {
 		background: #eff6ff;
 		color: #1d72fe;
 	}
 
-	/* Projects Dashboard Grid (matching Screenshot 2) */
-	.projects-dashboard-grid {
+	/* Projects Grid */
+	.projects-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
-		gap: 20px;
+		gap: 16px;
+	}
+	.projects-grid.list-layout {
+		grid-template-columns: 1fr;
 	}
 
-	.project-grid-card {
-		background: #ffffff;
-		border-radius: 18px;
-		overflow: hidden;
+	.project-card {
+		border-radius: 16px;
 		border: 1px solid #e2e8f0;
-		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
-		text-decoration: none;
+		background: #ffffff;
+		overflow: hidden;
 		display: flex;
 		flex-direction: column;
-		transition: transform 0.15s ease, box-shadow 0.15s ease;
+		text-decoration: none;
+		transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
 	}
-	.project-grid-card:hover {
-		transform: translateY(-3px);
-		box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-		border-color: #cbd5e1;
+	.project-card:hover {
+		transform: translateY(-2px);
+		border-color: #93c5fd;
+		box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+		text-decoration: none;
 	}
 
-	.card-cover-banner {
-		height: 110px;
-		padding: 12px;
+	.project-cover {
+		height: 92px;
+		padding: 12px 14px;
 		display: flex;
-		justify-content: space-between;
 		align-items: flex-start;
-		position: relative;
+		justify-content: space-between;
 	}
-
 	.cover-domain-tag {
-		background: rgba(255, 255, 255, 0.25);
+		background: rgba(255, 255, 255, 0.22);
 		color: #ffffff;
-		backdrop-filter: blur(4px);
-		padding: 3px 10px;
-		border-radius: 9999px;
 		font-size: 0.6875rem;
 		font-weight: 700;
-		letter-spacing: 0.03em;
+		padding: 3px 9px;
+		border-radius: 9999px;
+	}
+	.cover-action-pill {
+		background: rgba(255, 255, 255, 0.94);
+		color: #1d72fe;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		padding: 3px 9px;
+		border-radius: 9999px;
 	}
 
-	.cover-start-badge {
-		background: #1d72fe;
-		color: #ffffff;
-		font-size: 0.625rem;
-		font-weight: 800;
-		padding: 4px 8px;
-		border-radius: 6px;
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-	}
-
-	.card-body-content {
-		padding: 16px;
+	.project-body {
+		padding: 14px 16px 16px;
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
 		flex: 1;
 	}
-
-	.card-proj-title {
+	.project-title {
 		font-size: 0.9375rem;
 		font-weight: 700;
-		color: #1e293b;
+		color: #0f172a;
 		margin: 0;
-		line-height: 1.3;
+	}
+	.project-summary {
+		font-size: 0.78125rem;
+		color: #64748b;
+		line-height: 1.4;
+		margin: 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
 
-	.rating-stars-row {
+	.capacity-header {
 		display: flex;
-		align-items: center;
-		gap: 2px;
-		font-size: 0.75rem;
+		justify-content: space-between;
+		font-size: 0.71875rem;
+		color: #64748b;
+		margin-top: 4px;
 	}
-	.star.filled { color: #f59e0b; }
-	.rating-text { color: #94a3b8; font-weight: 600; margin-left: 2px; }
-	.progress-percent {
-		margin-left: auto;
-		font-size: 0.75rem;
+	.capacity-pct {
 		font-weight: 700;
 		color: #1d72fe;
 	}
-
-	.project-capacity-bar-wrap {
-		width: 100%;
-		height: 5px;
+	.capacity-bar {
+		height: 6px;
 		border-radius: 9999px;
-		background: #eff6ff;
+		background: #f1f5f9;
 		overflow: hidden;
-		margin-bottom: 4px;
 	}
 	.capacity-fill {
 		height: 100%;
-		background: #1d72fe;
 		border-radius: 9999px;
+		background: #1d72fe;
 	}
 
-	.card-meta-indicators {
+	.project-meta-chips {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 6px;
 		margin-top: auto;
-		flex-wrap: wrap;
+		padding-top: 6px;
 	}
-
-	.meta-item-box {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
+	.meta-chip {
 		font-size: 0.6875rem;
 		font-weight: 600;
 		padding: 3px 8px;
 		border-radius: 6px;
 	}
-	.meta-item-box.orange { background: #fff7ed; color: #ea580c; }
-	.meta-item-box.green { background: #f0fdf4; color: #16a34a; }
-	.meta-item-box.purple { background: #faf5ff; color: #9333ea; }
+	.meta-chip.orange { background: #fff7ed; color: #ea580c; }
+	.meta-chip.green { background: #f0fdf4; color: #16a34a; }
+	.meta-chip.purple { background: #faf5ff; color: #9333ea; }
 
 	.project-card-skeleton {
-		height: 220px;
-		border-radius: 18px;
+		height: 230px;
+		border-radius: 16px;
 	}
 
-	.empty-projects-state {
-		padding: 36px;
+	/* Empty States */
+	.empty-inline-state,
+	.empty-projects-box {
+		padding: 28px 16px;
 		text-align: center;
-		color: #94a3b8;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 12px;
+		color: #64748b;
+		font-size: 0.875rem;
 	}
-
-	.create-first-btn {
+	.empty-cta-row {
+		display: flex;
+		justify-content: center;
+		gap: 10px;
+		margin-top: 14px;
+	}
+	.btn-primary-sm {
+		padding: 8px 16px;
+		border-radius: 10px;
 		background: #1d72fe;
-		color: white;
-		padding: 8px 18px;
-		border-radius: 9999px;
+		color: #ffffff;
 		font-size: 0.8125rem;
-		font-weight: 700;
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.btn-outline-sm {
+		padding: 8px 16px;
+		border-radius: 10px;
+		border: 1px solid #cbd5e1;
+		background: #ffffff;
+		color: #334155;
+		font-size: 0.8125rem;
+		font-weight: 600;
 		text-decoration: none;
 	}
 
-	/* Right Widgets Column (matching Screenshot 2) */
-	.right-widgets-column {
+	/* Right Column Widgets */
+	.dashboard-right-col {
 		display: flex;
 		flex-direction: column;
-		gap: 24px;
+		gap: 18px;
 	}
 
 	.widget-card {
+		padding: 18px 20px;
 		background: #ffffff;
-		border-radius: 24px;
-		padding: 22px 24px;
-		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03);
-		border: 1px solid rgba(226, 232, 240, 0.7);
+		border-radius: 20px;
+		border: 1px solid #e6edf5;
 	}
 
 	.widget-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 16px;
+		margin-bottom: 14px;
 	}
-
 	.widget-title-wrap {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 	}
-
 	.widget-icon {
+		width: 28px;
+		height: 28px;
+		border-radius: 8px;
 		display: flex;
 		align-items: center;
+		justify-content: center;
 	}
+	.widget-icon.blue { background: #eff6ff; color: #2563eb; }
+	.widget-icon.purple { background: #faf5ff; color: #9333ea; }
+	.widget-icon.green { background: #f0fdf4; color: #16a34a; }
 
 	.widget-title {
-		font-size: 1.0625rem;
-		font-weight: 800;
-		color: #1e293b;
+		font-size: 0.9375rem;
+		font-weight: 700;
+		color: #0f172a;
 		margin: 0;
 	}
 
-	.widget-see-all {
-		font-size: 0.8125rem;
-		font-weight: 700;
+	.widget-link {
+		font-size: 0.75rem;
+		font-weight: 600;
 		text-decoration: none;
 	}
-	.widget-see-all.blue { color: #1d72fe; }
-	.widget-see-all.purple { color: #9333ea; }
-	.widget-see-all.green { color: #16a34a; }
-	.widget-see-all:hover { text-decoration: underline; }
+	.widget-link.blue { color: #2563eb; }
+	.widget-link.purple { color: #9333ea; }
+	.widget-link.green { color: #16a34a; }
 
 	.widget-tabs-row {
 		display: flex;
-		gap: 14px;
-		margin-bottom: 14px;
-		border-bottom: 1px solid #f1f5f9;
-		padding-bottom: 6px;
+		gap: 6px;
+		margin-bottom: 12px;
 	}
-
 	.widget-tab-btn {
-		background: none;
+		padding: 4px 10px;
+		border-radius: 6px;
 		border: none;
-		font-size: 0.8125rem;
+		background: #f8fafc;
+		color: #64748b;
+		font-size: 0.75rem;
 		font-weight: 600;
-		color: #94a3b8;
 		cursor: pointer;
-		padding: 2px 0;
-		position: relative;
 	}
-	.widget-tab-btn.active { color: #16a34a; }
-	.widget-tab-btn.active::after {
-		content: '';
-		position: absolute;
-		bottom: -7px;
-		left: 0;
-		right: 0;
-		height: 2px;
-		background: #16a34a;
+	.widget-tab-btn.active {
+		background: #dcfce7;
+		color: #15803d;
 	}
 
-	.widget-items-list {
+	.widget-list {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 10px;
 	}
 
-	.forum-item-row {
+	.widget-row-item {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 10px;
+		gap: 10px;
+		padding: 8px 10px;
 		border-radius: 12px;
+		background: #f8fafc;
 		text-decoration: none;
 		transition: background 0.15s ease;
 	}
-	.forum-item-row:hover { background: #f8fafc; }
-
-	.item-avatar-circle {
-		width: 38px;
-		height: 38px;
-		border-radius: 50%;
-		overflow: hidden;
-		background: #e0f2fe;
-		color: #0284c7;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 0.8125rem;
-		font-weight: 700;
-		flex-shrink: 0;
-	}
-	.item-avatar-circle.purple { background: #faf5ff; color: #9333ea; }
-	.item-avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
-
-	.forum-item-info {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		min-width: 0;
-	}
-	.forum-item-title {
-		font-size: 0.8125rem;
-		font-weight: 700;
-		color: #1e293b;
-		margin: 0;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.forum-item-snippet {
-		font-size: 0.75rem;
-		color: #64748b;
-		margin: 0;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.activity-item-row {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 8px 4px;
-	}
-
-	.activity-item-info {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		font-size: 0.8125rem;
-	}
-	.activity-text {
-		color: #334155;
-		margin: 0;
-		line-height: 1.3;
-	}
-	.activity-time {
-		font-size: 0.6875rem;
-		color: #94a3b8;
-	}
-
-	.group-item-row {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 8px 4px;
+	.widget-row-item:hover {
+		background: #eff6ff;
 		text-decoration: none;
 	}
 
-	.group-icon-circle {
-		width: 36px;
-		height: 36px;
+	.widget-avatar-circle {
+		width: 34px;
+		height: 34px;
 		border-radius: 50%;
-		background: #f0fdf4;
+		background: #dbeafe;
+		color: #1d72fe;
+		font-size: 0.75rem;
+		font-weight: 700;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
+		overflow: hidden;
+	}
+	.widget-avatar-circle.purple { background: #ede9fe; color: #9333ea; }
+	.widget-avatar-circle.green { background: #dcfce7; color: #16a34a; }
+	.widget-avatar-circle img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
 	}
 
-	.group-item-info {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
+	.widget-row-text {
 		min-width: 0;
+		flex: 1;
 	}
-	.group-item-name {
+	.widget-row-title {
 		font-size: 0.8125rem;
-		font-weight: 700;
-		color: #1e293b;
+		font-weight: 600;
+		color: #0f172a;
 		margin: 0;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
-	.group-status-time {
-		font-size: 0.6875rem;
-		color: #10b981;
-		font-weight: 600;
+	.widget-row-sub,
+	.widget-activity-copy {
+		font-size: 0.75rem;
+		color: #64748b;
+		margin: 0;
+		line-height: 1.35;
 	}
-
+	.widget-time {
+		font-size: 0.6875rem;
+		color: #94a3b8;
+	}
 	.widget-empty {
 		font-size: 0.8125rem;
 		color: #94a3b8;
-		padding: 12px 0;
-		margin: 0;
+		margin: 4px 0;
 	}
 
-	@media (max-width: 1200px) {
-		.dashboard-container {
+	/* Responsive Breakpoints */
+	@media (max-width: 1120px) {
+		.dashboard-layout {
 			grid-template-columns: 1fr;
 		}
-		.stat-metrics-row {
-			grid-template-columns: repeat(2, 1fr);
-		}
-		.projects-dashboard-grid {
+		.projects-grid {
 			grid-template-columns: repeat(2, 1fr);
 		}
 	}
 
-	@media (max-width: 640px) {
-		.welcome-hero-card {
+	@media (max-width: 720px) {
+		.stats-metrics-row {
+			grid-template-columns: repeat(2, 1fr);
+		}
+		.projects-grid {
+			grid-template-columns: 1fr;
+		}
+		.hero-left {
 			flex-direction: column;
 			align-items: flex-start;
-			padding: 20px;
 		}
-		.hero-shapes-decor {
+		.hero-geo-decor {
 			display: none;
-		}
-		.stat-metrics-row {
-			grid-template-columns: 1fr;
-		}
-		.projects-dashboard-grid {
-			grid-template-columns: 1fr;
 		}
 	}
 </style>

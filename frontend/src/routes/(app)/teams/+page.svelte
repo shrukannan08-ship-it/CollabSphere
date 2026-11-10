@@ -74,15 +74,15 @@
 	<!-- Top Hero Header -->
 	<header class="teams-hero-banner">
 		<div class="hero-text-col">
-			<span class="hero-category-tag">Workspace Hub</span>
-			<h1 class="hero-title">Team Collaboration</h1>
+			<span class="hero-category-tag">Team Collaboration</span>
+			<h1 class="hero-title">My Teams</h1>
 			<p class="hero-subtitle">
-				Coordinate project tasks, connect with cross-functional student peers, and manage team recruitment.
+				Coordinate project work, connect with fellow student contributors, and manage open team roles.
 			</p>
 		</div>
 		<div class="hero-actions-col">
-			<Button href="/projects/new" variant="primary">+ Create Project Team</Button>
-			<Button href="/positions" variant="secondary">Browse Open Roles</Button>
+			<Button href="/projects/new" variant="primary">Create Project</Button>
+			<Button href="/positions" variant="outline">Explore Opportunities</Button>
 		</div>
 	</header>
 
@@ -171,8 +171,8 @@
 						You haven't joined or created a project team yet. Start a new project or explore open roles to collaborate with fellow students.
 					</p>
 					<div class="empty-actions">
-						<Button href="/projects/new" variant="primary">Create a Project</Button>
-						<Button href="/projects" variant="secondary">Explore Projects</Button>
+						<Button href="/projects/new" variant="primary">Create Project</Button>
+						<Button href="/projects" variant="outline">Explore Projects</Button>
 					</div>
 				</div>
 			{:else}
@@ -242,7 +242,7 @@
 							<!-- Footer Actions -->
 							<div class="team-card-footer">
 								<a href="/projects/{project.id}" class="workspace-btn">
-									Open Workspace →
+									View Project
 								</a>
 								{#if project.createdBy === user?.id}
 									<span class="owner-indicator-badge">Lead</span>
@@ -263,7 +263,7 @@
 					<p class="empty-desc">
 						There are currently no active openings posted by student teams. Check back soon or create your own project opening.
 					</p>
-					<Button href="/projects/new" variant="primary">Start a Project</Button>
+					<Button href="/projects/new" variant="primary">Create Project</Button>
 				</div>
 			{:else}
 				<div class="roles-grid">
@@ -286,7 +286,7 @@
 							</div>
 							<div class="role-card-footer">
 								<Button href="/positions/{role.id}/apply" variant="primary" size="sm">
-									Apply for Role →
+									Submit Application
 								</Button>
 							</div>
 						</div>
@@ -353,11 +353,11 @@
 		align-items: center;
 		flex-wrap: wrap;
 		gap: 20px;
-		padding: 32px 36px;
-		background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(243, 246, 250, 0.95) 100%);
-		border-radius: 24px;
-		border: 1px solid rgba(226, 232, 240, 0.9);
-		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
+		padding: 28px 32px;
+		background: linear-gradient(125deg, #f0f7ff 0%, #dcecff 58%, #cae2ff 100%);
+		border-radius: 20px;
+		border: 1px solid #d5e6fc;
+		box-shadow: 0 4px 18px rgba(29, 114, 254, 0.06);
 	}
 
 	.hero-category-tag {

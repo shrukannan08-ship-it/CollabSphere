@@ -49,7 +49,7 @@
 			<h1 class="page-title">My Applications</h1>
 			<p class="page-subtitle">Track the status of your submitted collaboration requests.</p>
 		</div>
-		<Button href="/positions" variant="primary">Browse Open Roles</Button>
+		<Button href="/positions" variant="primary">Explore Opportunities</Button>
 	</div>
 
 	{#if loading}
@@ -68,7 +68,7 @@
 			<div class="empty-icon">📝</div>
 			<h3>No applications yet</h3>
 			<p>You haven't applied to any project roles yet. Find an interesting project and submit your first request!</p>
-			<Button href="/positions" variant="primary">Explore Open Positions</Button>
+			<Button href="/positions" variant="primary">Explore Opportunities</Button>
 		</div>
 	{:else}
 		<div class="apps-list">

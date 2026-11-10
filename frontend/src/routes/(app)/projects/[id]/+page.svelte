@@ -458,7 +458,7 @@
 				</div>
 			</form>
 		{:else}
-			<!-- View Mode (Screenshots 1 & 2 - Tactile 3D Claymorphic Soft UI) -->
+			<!-- View Mode (Aligned with First Website Reference) -->
 			<div class="project-hero-workspace">
 				<div class="hero-top-bar">
 					<div class="badges-row">
@@ -466,11 +466,11 @@
 							{project.status === 'active' ? 'In Progress' : project.status.replace('_', ' ')}
 						</span>
 						{#if project.recruitmentStatus === 'open'}
-							<span class="status-badge status-recruiting">🟢 Recruiting</span>
+							<span class="status-badge status-recruiting">Recruiting</span>
 						{:else}
-							<span class="status-badge status-closed">🔴 Recruitment Closed</span>
+							<span class="status-badge status-closed">Recruitment Closed</span>
 						{/if}
-						<span class="status-badge status-capacity">👥 Capacity: {project.teamSize || 4} members</span>
+						<span class="status-badge status-capacity">Capacity: {project.teamSize || 4} members</span>
 						{#if project.domain}
 							<span class="domain-badge">{project.domain}</span>
 						{/if}
@@ -482,22 +482,22 @@
 								{project.recruitmentStatus === 'open' ? 'Close Recruitment' : 'Reopen Recruitment'}
 							</Button>
 							<Button variant="primary" onclick={() => (showRecruitModal = true)}>
-								+ Post Open Role
+								Post Open Role
 							</Button>
-							<Button variant="secondary" onclick={() => (isEditing = true)}>Edit</Button>
-							<Button variant="danger" onclick={handleDelete} loading={deleting}>Delete</Button>
+							<Button variant="secondary" onclick={() => (isEditing = true)}>Edit Project</Button>
+							<Button variant="danger" onclick={handleDelete} loading={deleting}>Delete Project</Button>
 						{:else}
 							{#if $currentUser}
 								{#if isMember}
-									<span class="user-role-badge member">✓ Team Member</span>
+									<span class="user-role-badge member">Team Member</span>
 								{:else if myRequest && myRequest.status === 'pending'}
-									<span class="user-role-badge pending">⏳ Join Request Pending</span>
+									<span class="user-role-badge pending">Join Request Pending</span>
 								{:else if myRequest && myRequest.status === 'accepted'}
-									<span class="user-role-badge member">✓ Accepted Contributor</span>
+									<span class="user-role-badge member">Accepted Contributor</span>
 								{:else}
 									{#if project.recruitmentStatus === 'open' && !isTeamFull}
-										<button class="join-project-coral-btn" onclick={() => (showJoinModal = true)}>
-											Request to Join →
+										<button class="join-project-primary-btn" onclick={() => (showJoinModal = true)}>
+											Request to Join
 										</button>
 									{:else if isTeamFull}
 										<span class="user-role-badge full">Team Full ({teamCount}/{teamCapacity})</span>
@@ -506,39 +506,20 @@
 									{/if}
 								{/if}
 							{:else}
-								<Button variant="primary" href="/login">Log in to Request Join</Button>
+								<Button variant="primary" href="/login">Sign In to Request Join</Button>
 							{/if}
 						{/if}
 					</div>
 				</div>
 
-				<!-- Centered Lead Profile & Project Identity (Screenshot 1) -->
+				<!-- Project Lead & Identity -->
 				<div class="hero-identity-center">
-					<div class="lead-avatar-dock-wrap">
-						<div class="lead-avatar-circle">
-							{#if project.creatorAvatarUrl}
-								<img src={project.creatorAvatarUrl} alt={project.creatorName} />
-							{:else}
-								<span class="lead-avatar-initials">{project.creatorName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}</span>
-							{/if}
-							<span class="lead-online-dot" title="Lead Online"></span>
-						</div>
-
-						<!-- Quick Action Pill docked under avatar (Screenshot 1) -->
-						<div class="avatar-quick-dock" aria-label="Quick actions">
-							<button type="button" class="quick-dock-btn" onclick={() => ui.toast.info('Voice room', 'Join active contributors on Discord/Meet')} title="Voice Channel">
-								📞
-							</button>
-							<a href="#discussions" class="quick-dock-btn" title="Open Discussions">
-								💬
-							</a>
-							<a href="#roadmap" class="quick-dock-btn" title="Project Milestones">
-								📅
-							</a>
-							<a href="#details" class="quick-dock-btn" title="Project Objectives">
-								ℹ️
-							</a>
-						</div>
+					<div class="lead-avatar-circle">
+						{#if project.creatorAvatarUrl}
+							<img src={project.creatorAvatarUrl} alt={project.creatorName} />
+						{:else}
+							<span class="lead-avatar-initials">{project.creatorName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+						{/if}
 					</div>
 
 					<h1 class="project-title">{project.name}</h1>
@@ -558,34 +539,36 @@
 					</div>
 
 					<!-- Repository & Live Demo Action Links -->
-					<div class="project-links-row">
-						{#if project.githubUrl}
-							<a href={project.githubUrl} target="_blank" rel="noopener noreferrer" class="link-btn github">
-								<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-								GitHub Repo
-							</a>
-						{/if}
+					{#if project.githubUrl || project.demoUrl || project.documentationUrl}
+						<div class="project-links-row">
+							{#if project.githubUrl}
+								<a href={project.githubUrl} target="_blank" rel="noopener noreferrer" class="link-btn github">
+									<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+									View GitHub Repository
+								</a>
+							{/if}
 
-						{#if project.demoUrl}
-							<a href={project.demoUrl} target="_blank" rel="noopener noreferrer" class="link-btn demo">
-								🔗 Live Demo
-							</a>
-						{/if}
+							{#if project.demoUrl}
+								<a href={project.demoUrl} target="_blank" rel="noopener noreferrer" class="link-btn demo">
+									View Live Demo
+								</a>
+							{/if}
 
-						{#if project.documentationUrl}
-							<a href={project.documentationUrl} target="_blank" rel="noopener noreferrer" class="link-btn docs">
-								📖 Documentation
-							</a>
-						{/if}
-					</div>
+							{#if project.documentationUrl}
+								<a href={project.documentationUrl} target="_blank" rel="noopener noreferrer" class="link-btn docs">
+									View Documentation
+								</a>
+							{/if}
+						</div>
+					{/if}
 				</div>
 
-				<!-- Navigation Tab Strip (Screenshot 1) -->
+				<!-- Section Navigation -->
 				<div class="workspace-nav-tabstrip">
 					<a href="#roadmap" class="tabstrip-pill-btn active">Roadmap</a>
-					<a href="#discussions" class="tabstrip-pill-btn">Discussions</a>
 					<a href="#team" class="tabstrip-pill-btn">Team Roster ({teamCount})</a>
 					<a href="#roles" class="tabstrip-pill-btn">Open Roles ({positions.length})</a>
+					<a href="#discussions" class="tabstrip-pill-btn">Discussions</a>
 					{#if isOwner}
 						<a href="#join-requests" class="tabstrip-pill-btn highlight">
 							Join Requests {#if pendingJoinRequests.length > 0}({pendingJoinRequests.length}){/if}
@@ -642,7 +625,7 @@
 
 			<!-- Owner Join Requests Section -->
 			{#if isOwner}
-				<section class="join-requests-section card">
+				<section id="join-requests" class="join-requests-section card">
 					<div class="section-top">
 						<div>
 							<div class="section-title-badge-row">
@@ -774,7 +757,7 @@
 			{/if}
 
 			<!-- Open Positions Section -->
-			<section class="positions-section card">
+			<section id="roles" class="positions-section card">
 				<div class="section-top">
 					<div>
 						<h2 class="section-title">Open Positions & Team Recruitment</h2>
@@ -782,7 +765,7 @@
 					</div>
 					{#if isOwner}
 						<Button variant="secondary" onclick={() => (showRecruitModal = true)}>
-							+ Add Role
+							Post Open Role
 						</Button>
 					{/if}
 				</div>
@@ -840,7 +823,7 @@
 										</button>
 									{:else if pos.isOpen}
 										<Button href="/positions/{pos.id}/apply" variant="primary">
-											Apply for Role →
+											Submit Application
 										</Button>
 									{/if}
 								</div>
@@ -952,7 +935,7 @@
 					</div>
 
 					<!-- Team & Contributors Showcase -->
-					<div class="team-card card">
+					<div id="team" class="team-card card">
 						<div class="team-header">
 							<div>
 								<h2 class="section-title">Team & Contributors</h2>
@@ -1307,17 +1290,17 @@
 	}
 	.back-link:hover { text-decoration: underline; }
 
-	/* Hero Workspace (Screenshots 1 & 2 - Tactile 3D Claymorphic Soft UI) */
+	/* Hero Workspace (Aligned with First Website Reference) */
 	.project-hero-workspace {
-		background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 50%, #ede9fe 100%);
-		border-radius: 26px;
-		padding: 32px 36px 20px;
+		background: linear-gradient(125deg, #f0f7ff 0%, #dcecff 58%, #cae2ff 100%);
+		border-radius: 20px;
+		padding: 28px 32px 20px;
 		display: flex;
 		flex-direction: column;
-		gap: 24px;
+		gap: 22px;
 		position: relative;
-		border: 1px solid rgba(255, 255, 255, 0.95);
-		box-shadow: 0 12px 36px rgba(99, 102, 241, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+		border: 1px solid #d5e6fc;
+		box-shadow: 0 4px 18px rgba(29, 114, 254, 0.06);
 	}
 
 	.hero-top-bar {
@@ -1328,39 +1311,33 @@
 		gap: 12px;
 	}
 
-	.join-project-coral-btn {
-		padding: 8px 22px;
-		border-radius: 9999px;
-		background: linear-gradient(135deg, #ff7e72 0%, #ff5d52 100%);
+	.join-project-primary-btn {
+		padding: 9px 22px;
+		border-radius: 10px;
+		background: #1d72fe;
 		color: #ffffff;
 		border: none;
 		font-size: 0.875rem;
 		font-weight: 700;
 		cursor: pointer;
-		box-shadow: 0 4px 16px rgba(255, 112, 102, 0.4);
-		transition: transform 0.15s ease;
+		box-shadow: 0 4px 14px rgba(29, 114, 254, 0.28);
+		transition: background 0.15s ease, transform 0.15s ease;
 	}
-	.join-project-coral-btn:hover { transform: scale(1.03); }
+	.join-project-primary-btn:hover {
+		background: #155bd5;
+		transform: translateY(-1px);
+	}
 
 	.status-recruiting { background: #dcfce7; color: #166534; }
 	.status-closed { background: #fee2e2; color: #991b1b; }
 	.status-capacity { background: #ffffff; color: #374151; border: 1px solid #e2e8f0; }
 
-	/* Centered Identity & Avatar Dock (Screenshot 1) */
 	.hero-identity-center {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		text-align: center;
-		gap: 12px;
-	}
-
-	.lead-avatar-dock-wrap {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		position: relative;
-		margin-bottom: 4px;
+		gap: 10px;
 	}
 
 	.lead-avatar-circle {
@@ -1369,7 +1346,7 @@
 		border-radius: 50%;
 		background: #ffffff;
 		border: 4px solid #ffffff;
-		box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+		box-shadow: 0 8px 20px rgba(29, 114, 254, 0.16);
 		overflow: hidden;
 		display: flex;
 		align-items: center;
@@ -1377,75 +1354,33 @@
 		position: relative;
 	}
 	.lead-avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
-	.lead-avatar-initials { font-size: 1.5rem; font-weight: 800; color: #4f46e5; }
+	.lead-avatar-initials { font-size: 1.5rem; font-weight: 800; color: #1d72fe; }
 
-	.lead-online-dot {
-		position: absolute;
-		bottom: 4px;
-		right: 4px;
-		width: 14px;
-		height: 14px;
-		border-radius: 50%;
-		background: #10b981;
-		border: 2.5px solid #ffffff;
-	}
-
-	/* Quick Actions Dock pill docked under avatar (Screenshot 1) */
-	.avatar-quick-dock {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 4px 10px;
-		background: rgba(255, 255, 255, 0.9);
-		backdrop-filter: blur(10px);
-		border: 1px solid rgba(255, 255, 255, 0.95);
-		border-radius: 9999px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-		margin-top: -12px;
-		z-index: 3;
-	}
-	.quick-dock-btn {
-		width: 26px;
-		height: 26px;
-		border-radius: 50%;
-		border: none;
-		background: transparent;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 0.8125rem;
-		color: #475569;
-		cursor: pointer;
-		text-decoration: none;
-		transition: background 0.15s ease, transform 0.15s ease;
-	}
-	.quick-dock-btn:hover { background: #f1f5f9; transform: scale(1.15); }
-
-	/* Sub-Navigation Pill Tabstrip (Screenshot 1) */
+	/* Sub-Navigation Pill Tabstrip */
 	.workspace-nav-tabstrip {
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		gap: 8px;
 		padding-top: 12px;
-		border-top: 1px solid rgba(255, 255, 255, 0.6);
+		border-top: 1px solid rgba(255, 255, 255, 0.7);
 		flex-wrap: wrap;
 	}
 	.tabstrip-pill-btn {
 		padding: 6px 16px;
 		border-radius: 9999px;
-		background: rgba(255, 255, 255, 0.6);
+		background: rgba(255, 255, 255, 0.7);
 		color: #475569;
 		font-size: 0.8125rem;
 		font-weight: 600;
 		text-decoration: none;
 		transition: all 0.15s ease;
-		border: 1px solid rgba(255, 255, 255, 0.8);
+		border: 1px solid rgba(255, 255, 255, 0.85);
 	}
-	.tabstrip-pill-btn:hover { background: #ffffff; color: #1e293b; }
+	.tabstrip-pill-btn:hover { background: #ffffff; color: #0f172a; text-decoration: none; }
 	.tabstrip-pill-btn.active {
 		background: #ffffff;
-		color: #4f46e5;
+		color: #1d72fe;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 	}
 	.tabstrip-pill-btn.highlight {
@@ -1529,10 +1464,10 @@
 		border-color: #10b981;
 	}
 	.milestone-step-node.active .step-dot {
-		background: #4f46e5;
+		background: #1d72fe;
 		color: #ffffff;
-		border-color: #4f46e5;
-		box-shadow: 0 0 0 4px #e0e7ff;
+		border-color: #1d72fe;
+		box-shadow: 0 0 0 4px #dbeafe;
 	}
 	.step-info {
 		display: flex;
@@ -1549,7 +1484,7 @@
 		color: #94a3b8;
 	}
 
-	/* 4 Tactile 3D Metric Boxes (Screenshots 1 & 2) */
+	/* 4 Metric Cards (Aligned with First Website Reference) */
 	.project-metrics-4grid {
 		display: grid;
 		grid-template-columns: repeat(4, 1fr);
@@ -1557,10 +1492,10 @@
 	}
 	.mini-stat-clay-box {
 		padding: 16px 18px;
-		border-radius: 18px;
+		border-radius: 16px;
 		background: #ffffff;
-		border: 1px solid rgba(255, 255, 255, 0.9);
-		box-shadow: 6px 6px 14px rgba(195, 175, 160, 0.18), -6px -6px 14px rgba(255, 255, 255, 0.95);
+		border: 1px solid #e6edf5;
+		box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
 		display: flex;
 		align-items: center;
 		gap: 14px;

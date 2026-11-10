@@ -87,7 +87,7 @@
 
 	/* Left — branding */
 	.auth-branding {
-		background: linear-gradient(135deg, #4338ca 0%, #5b4cf5 45%, #7c3aed 100%);
+		background: linear-gradient(135deg, #1d4ed8 0%, #1d72fe 50%, #3b82f6 100%);
 		position: relative;
 		overflow: hidden;
 		display: flex;

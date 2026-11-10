@@ -46,12 +46,12 @@
 <div class="positions-page">
 	<div class="page-header">
 		<div>
-			<h1 class="page-title">Team Recruitment & Roles</h1>
-			<p class="page-subtitle">Browse open contributor opportunities and apply to join active student projects.</p>
+			<h1 class="page-title">Opportunities</h1>
+			<p class="page-subtitle">Browse open team roles and submit collaboration applications to student projects.</p>
 		</div>
 		<div class="header-buttons">
 			<Button href="/positions/my-applications" variant="secondary">My Applications</Button>
-			<Button href="/projects" variant="primary">Browse Projects</Button>
+			<Button href="/projects" variant="primary">Explore Projects</Button>
 		</div>
 	</div>
 
@@ -134,11 +134,11 @@
 						</span>
 						{#if $currentUser && pos.createdBy === $currentUser.id}
 							<Button href="/projects/{pos.projectId}" variant="secondary">
-								Manage in Project →
+								Manage Team
 							</Button>
 						{:else}
 							<Button href="/positions/{pos.id}/apply" variant="primary">
-								Apply for Role →
+								Submit Application
 							</Button>
 						{/if}
 					</div>

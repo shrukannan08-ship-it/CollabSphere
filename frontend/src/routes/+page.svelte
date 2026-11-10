@@ -21,7 +21,7 @@
 <div class="splash">
 	<div class="splash-logo">
 		<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-			<circle cx="20" cy="20" r="20" fill="#5B4CF5" />
+			<circle cx="20" cy="20" r="20" fill="#1D72FE" />
 			<path d="M12 20C12 15.58 15.58 12 20 12C24.42 12 28 15.58 28 20" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
 			<circle cx="20" cy="20" r="4" fill="white"/>
 			<path d="M16 26C16 26 17.5 28 20 28C22.5 28 24 26 24 26" stroke="white" stroke-width="2.5" stroke-linecap="round"/>

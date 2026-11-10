@@ -91,7 +91,7 @@
 		<div class="register-header">
 			<div class="mobile-logo">
 				<svg width="32" height="32" viewBox="0 0 44 44" fill="none">
-					<circle cx="22" cy="22" r="22" fill="#5B4CF5"/>
+					<circle cx="22" cy="22" r="22" fill="#1D72FE"/>
 					<circle cx="22" cy="22" r="5" fill="white"/>
 					<path d="M14 22C14 17.58 17.58 14 22 14C26.42 14 30 17.58 30 22" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
 				</svg>

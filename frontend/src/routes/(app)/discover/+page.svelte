@@ -76,7 +76,7 @@
 				bind:value={institutionFilter}
 				placeholder="Filter by university / institution..."
 			/>
-			<Button type="submit" variant="secondary">Filter Peers</Button>
+			<Button type="submit" variant="primary">Search Peers</Button>
 		</div>
 	</form>
 
@@ -140,7 +140,7 @@
 					{/if}
 
 					<div class="card-footer">
-						<span class="view-profile-link">View Portfolio →</span>
+						<span class="view-profile-link">View Profile</span>
 					</div>
 				</a>
 			{/each}
